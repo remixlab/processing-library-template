@@ -28,12 +28,8 @@ public class MatrixStackHelper extends MatrixHelper {
   float[][] pmatrixStack = new float[MATRIX_STACK_DEPTH][16];
   int pmatrixStackDepth;
 
-  Mat projection, modelview;
-
   public MatrixStackHelper(AbstractScene scn) {
     super(scn);
-    modelview = new Mat();
-    projection = new Mat();
   }
 
   @Override
@@ -52,40 +48,6 @@ public class MatrixStackHelper extends MatrixHelper {
     }
     matrixStackDepth--;
     modelview.set(matrixStack[matrixStackDepth]);
-  }
-
-  @Override
-  public void resetModelView() {
-    modelview.reset();
-  }
-
-  @Override
-  public Mat modelView() {
-    return modelview.get();
-  }
-
-  @Override
-  public Mat getModelView(Mat target) {
-    if (target == null)
-      target = new Mat();
-    target.set(modelview);
-    return target;
-  }
-
-  @Override
-  public void printModelView() {
-    modelview.print();
-  }
-
-  @Override
-  public void setModelView(Mat source) {
-    resetModelView();
-    applyModelView(source);
-  }
-
-  @Override
-  public void applyModelView(Mat source) {
-    modelview.apply(source);
   }
 
   @Override
@@ -154,39 +116,5 @@ public class MatrixStackHelper extends MatrixHelper {
     }
     pmatrixStackDepth--;
     projection.set(pmatrixStack[pmatrixStackDepth]);
-  }
-
-  @Override
-  public void setProjection(Mat source) {
-    resetProjection();
-    applyProjection(source);
-  }
-
-  @Override
-  public void resetProjection() {
-    projection.reset();
-  }
-
-  @Override
-  public void applyProjection(Mat source) {
-    projection.apply(source);
-  }
-
-  @Override
-  public Mat projection() {
-    return projection.get();
-  }
-
-  @Override
-  public Mat getProjection(Mat target) {
-    if (target == null)
-      target = new Mat();
-    target.set(projection);
-    return target;
-  }
-
-  @Override
-  public void printProjection() {
-    projection.print();
   }
 }

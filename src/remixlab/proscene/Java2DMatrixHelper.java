@@ -37,12 +37,10 @@ class Java2DMatrixHelper extends MatrixHelper {
   // public PGraphicsJava2D pg() { return (PGraphicsJava2D) pg; }
 
   @Override
-  public void bind(boolean recompute) {
-    if (recompute) {
-      gScene.eye().computeProjection();
-      gScene.eye().computeView();
-      cacheProjectionView();
-    }
+  public void bind() {
+    cacheProjection(gScene.eye().computeProjection());
+    cacheView(gScene.eye().computeView());
+    cacheProjectionView(Mat.multiply(cacheProjection(), cacheView()));
     Vec pos = gScene.eye().position();
     Rotation o = gScene.eye().frame().orientation();
     translate(gScene.width() / 2, gScene.height() / 2);
@@ -54,13 +52,8 @@ class Java2DMatrixHelper extends MatrixHelper {
   }
 
   @Override
-  protected void cacheProjectionView() {
-    Mat.multiply(gScene.eye().getProjection(), gScene.eye().getView(), projectionViewMat);
-    if (isProjectionViewInverseCached()) {
-      if (projectionViewInverseMat == null)
-        projectionViewInverseMat = new Mat();
-      projectionViewMatHasInv = projectionViewMat.invert(projectionViewInverseMat);
-    }
+  public void applyModelView(Mat source) {
+    pg().applyMatrix(Scene.toPMatrix2D(source));
   }
 
   @Override
@@ -93,42 +86,13 @@ class Java2DMatrixHelper extends MatrixHelper {
   }
 
   @Override
-  public void resetModelView() {
-    pg().resetMatrix();
-  }
-
-  @Override
   public Mat modelView() {
     return Scene.toMat(new PMatrix2D(pg().getMatrix()));
   }
 
   @Override
-  public Mat getModelView(Mat target) {
-    if (target == null)
-      target = Scene.toMat((PMatrix2D) pg().getMatrix()).get();
-    else
-      target.set(Scene.toMat((PMatrix2D) pg().getMatrix()));
-    return target;
-  }
-
-  @Override
-  public void setModelView(Mat source) {
+  public void bindModelView(Mat source) {
     pg().setMatrix(Scene.toPMatrix2D(source));
-  }
-
-  @Override
-  public void printModelView() {
-    pg().printMatrix();
-  }
-
-  @Override
-  public void printProjection() {
-    pg().printProjection();
-  }
-
-  @Override
-  public void applyModelView(Mat source) {
-    pg().applyMatrix(Scene.toPMatrix2D(source));
   }
 
   @Override

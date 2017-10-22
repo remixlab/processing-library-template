@@ -33,7 +33,6 @@ public class Window extends Eye implements Copyable {
     super(scn);
     if (gScene.is3D())
       throw new RuntimeException("Use Window only for a 2D Scene");
-    computeProjection();
   }
 
   protected Window(Window oVW) {
@@ -46,55 +45,61 @@ public class Window extends Eye implements Copyable {
   }
 
   @Override
-  public void computeView() {
+  public Mat computeView() {
+    Mat m = new Mat();
+
     Rot q = (Rot) frame().orientation();
 
     float cosB = (float) Math.cos((double) q.angle());
     float sinB = (float) Math.sin((double) q.angle());
 
-    viewMat.mat[0] = cosB;
-    viewMat.mat[1] = -sinB;
-    viewMat.mat[2] = 0.0f;
-    viewMat.mat[3] = 0.0f;
+    m.mat[0] = cosB;
+    m.mat[1] = -sinB;
+    m.mat[2] = 0.0f;
+    m.mat[3] = 0.0f;
 
-    viewMat.mat[4] = sinB;
-    viewMat.mat[5] = cosB;
-    viewMat.mat[6] = 0.0f;
-    viewMat.mat[7] = 0.0f;
+    m.mat[4] = sinB;
+    m.mat[5] = cosB;
+    m.mat[6] = 0.0f;
+    m.mat[7] = 0.0f;
 
-    viewMat.mat[8] = 0.0f;
-    viewMat.mat[9] = 0.0f;
-    viewMat.mat[10] = 1.0f;
-    viewMat.mat[11] = 0.0f;
+    m.mat[8] = 0.0f;
+    m.mat[9] = 0.0f;
+    m.mat[10] = 1.0f;
+    m.mat[11] = 0.0f;
 
     Vec t = q.inverseRotate(frame().position());
 
-    viewMat.mat[12] = -t.vec[0];
-    viewMat.mat[13] = -t.vec[1];
-    viewMat.mat[14] = -t.vec[2];
-    viewMat.mat[15] = 1.0f;
+    m.mat[12] = -t.vec[0];
+    m.mat[13] = -t.vec[1];
+    m.mat[14] = -t.vec[2];
+    m.mat[15] = 1.0f;
+
+    return m;
   }
 
   @Override
-  public void computeProjection() {
+  public Mat computeProjection() {
+    Mat m = new Mat();
+
     float[] wh = getBoundaryWidthHeight();
-    projectionMat.mat[0] = 1.0f / wh[0];
-    projectionMat.mat[5] = (gScene.isLeftHanded() ? -1.0f : 1.0f) / wh[1];
-    projectionMat.mat[10] = -2.0f / (FAKED_ZFAR - FAKED_ZNEAR);
-    projectionMat.mat[11] = 0.0f;
-    projectionMat.mat[14] = -(FAKED_ZFAR + FAKED_ZNEAR) / (FAKED_ZFAR - FAKED_ZNEAR);
-    projectionMat.mat[15] = 1.0f;
+    m.mat[0] = 1.0f / wh[0];
+    m.mat[5] = (gScene.isLeftHanded() ? -1.0f : 1.0f) / wh[1];
+    m.mat[10] = -2.0f / (FAKED_ZFAR - FAKED_ZNEAR);
+    m.mat[11] = 0.0f;
+    m.mat[14] = -(FAKED_ZFAR + FAKED_ZNEAR) / (FAKED_ZFAR - FAKED_ZNEAR);
+    m.mat[15] = 1.0f;
+
+    return m;
   }
 
   // TODO needs test
   @Override
-  public void fromView(Mat mv, boolean recompute) {
+  public void fromView(Mat mv) {
     Rot q = new Rot();
     q.fromMatrix(mv);
     setOrientation(q);
     setPosition(Vec.multiply(q.rotate(new Vec(mv.mat[12], mv.mat[13], mv.mat[14])), -1));
-    if (recompute)
-      this.computeView();
   }
 
   @Override

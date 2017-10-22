@@ -156,8 +156,6 @@ public abstract class Eye implements Copyable {
     VISIBLE, SEMIVISIBLE, INVISIBLE
   }
 
-  ;
-
   // F r a m e
   protected GenericFrame gFrame;
 
@@ -172,9 +170,6 @@ public abstract class Eye implements Copyable {
   protected float scnRadius; // processing scene
   // units
   protected int viewport[] = new int[4];
-
-  protected Mat viewMat;
-  protected Mat projectionMat;
 
   // P o i n t s o f V i e w s a n d K e y F r a m e s
   protected HashMap<Integer, KeyFrameInterpolator> kfi;
@@ -235,10 +230,6 @@ public abstract class Eye implements Copyable {
     setSceneRadius(100);
     setSceneCenter(new Vec(0.0f, 0.0f, 0.0f));
     setScreenWidthAndHeight(gScene.width(), gScene.height());
-
-    viewMat = new Mat();
-    projectionMat = new Mat();
-    projectionMat.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
   }
 
   protected Eye(Eye oVP) {
@@ -292,8 +283,6 @@ public abstract class Eye implements Copyable {
     this.setSceneRadius(oVP.sceneRadius());
     this.setSceneCenter(oVP.sceneCenter());
     this.setScreenWidthAndHeight(oVP.screenWidth(), oVP.screenHeight());
-    this.viewMat = oVP.viewMat.get();
-    this.projectionMat = oVP.projectionMat.get();
   }
 
   @Override
@@ -859,92 +848,6 @@ public abstract class Eye implements Copyable {
   }
 
   /**
-   * Convenience function that simply returns {@code getProjectionMatrix(false)}
-   *
-   * @see #getProjection(Mat, boolean)
-   */
-  public Mat getProjection() {
-    return getProjection(false);
-  }
-
-  /**
-   * Convenience function that simply returns {@code getProjection(new Mat(), recompute)}
-   *
-   * @see #getProjection(Mat, boolean)
-   */
-  public Mat getProjection(boolean recompute) {
-    return getProjection(new Mat(), recompute);
-  }
-
-  /**
-   * Convenience function that simply returns {@code getProjection(m, false)}
-   *
-   * @see #getProjection(Mat, boolean)
-   */
-  public Mat getProjection(Mat m) {
-    return getProjection(m, false);
-  }
-
-  /**
-   * Fills {@code m} with the Eye projection matrix values and returns it. If {@code m} is
-   * {@code null} a new Mat will be created.
-   * <p>
-   * If {@code recompute} is {@code true} first calls {@link #computeProjection()} to
-   * define the Eye projection matrix. Otherwise it returns the projection matrix
-   * previously computed, e.g., as with
-   * {@link remixlab.dandelion.core.MatrixHelper#loadProjection()}.
-   *
-   * @see #getView(Mat, boolean)
-   * @see remixlab.dandelion.core.MatrixHelper#loadProjection()
-   * @see remixlab.dandelion.core.MatrixHelper#loadModelView()
-   */
-  public Mat getProjection(Mat m, boolean recompute) {
-    if (m == null)
-      m = new Mat();
-
-    if (recompute)
-      // May not be needed, but easier and more robust like this.
-      computeProjection();
-    m.set(projectionMat);
-
-    return m;
-  }
-
-  /**
-   * Fills the projection matrix with the {@code proj} matrix values.
-   *
-   * @see #setProjection(float[])
-   * @see #setProjection(float[], boolean)
-   */
-  public void setProjection(Mat proj) {
-    projectionMat.set(proj);
-  }
-
-  /**
-   * Convenience function that simply calls {@code setProjectionMatrix(source, false)}.
-   *
-   * @see #setProjection(Mat)
-   * @see #setProjection(float[], boolean)
-   */
-  public void setProjection(float[] source) {
-    setProjection(source, false);
-  }
-
-  /**
-   * Fills the projection matrix with the {@code source} matrix values (defined in
-   * row-major order).
-   *
-   * @see #setProjection(Mat)
-   * @see #setProjection(float[])
-   */
-  public void setProjection(float[] source, boolean transpose) {
-    if (transpose)
-      projectionMat.setTransposed(source);
-    else
-      projectionMat.set(source);
-  }
-
-  /**
    * Computes the projection matrix associated with the Eye.
    * <p>
    * If Eye is a 3D PERSPECTIVE Camera, defines a projection matrix using the
@@ -958,15 +861,11 @@ public abstract class Eye implements Copyable {
    * are determined from sceneRadius() and sceneCenter() so that they best fit the scene
    * size.
    * <p>
-   * Use {@link #getProjection()} to retrieve this matrix.
-   * <p>
    * <b>Note:</b> You must call this method if your Eye is not associated with a Scene and
    * is used for offscreen computations (using {@code projectedCoordinatesOf()} for
    * instance).
-   *
-   * @see #setProjection(Mat)
    */
-  public abstract void computeProjection();
+  public abstract Mat computeProjection();
 
   /**
    * Convenience function that simply returns {@code getOrthoWidthHeight(new
@@ -1068,104 +967,21 @@ public abstract class Eye implements Copyable {
    * so that coordinates can then be projected on screen using the projection matrix (see
    * {@link #computeProjection()}).
    * <p>
-   * Use {@link #getView()} to retrieve this matrix.
-   * <p>
    * <b>Note:</b> You must call this method if your Eye is not associated with a Scene and
    * is used for offscreen computations (using {@code projectedCoordinatesOf()} for
    * instance).
    */
-  public abstract void computeView();
-
-  /**
-   * Convenience function that simply returns {@code getViewMatrix(false)}
-   *
-   * @see #getView(boolean)
-   * @see #getView(Mat)
-   * @see #getView(Mat, boolean)
-   * @see #getProjection()
-   * @see #getProjection(boolean)
-   * @see #getProjection(Mat)
-   * @see #getProjection(Mat, boolean)
-   */
-  public Mat getView() {
-    return getView(false);
-  }
-
-  /**
-   * Convenience function that simply returns {@code getViewMatrix(new Mat(), recompute)}
-   *
-   * @see #getView()
-   * @see #getView(Mat)
-   * @see #getView(Mat, boolean)
-   * @see #getProjection()
-   * @see #getProjection(boolean)
-   * @see #getProjection(Mat)
-   * @see #getProjection(Mat, boolean)
-   */
-  public Mat getView(boolean recompute) {
-    return getView(new Mat(), recompute);
-  }
-
-  /**
-   * Convenience function that simply returns {@code getViewMatrix(m, false)}
-   *
-   * @see #getView()
-   * @see #getView(boolean)
-   * @see #getView(Mat, boolean)
-   * @see #getProjection()
-   * @see #getProjection(boolean)
-   * @see #getProjection(Mat)
-   * @see #getProjection(Mat, boolean)
-   */
-  public Mat getView(Mat m) {
-    return getView(m, false);
-  }
-
-  /**
-   * Fills {@code m} with the Eye View matrix values and returns it. If {@code m} is
-   * {@code null} a new Mat will be created.
-   * <p>
-   * If {@code recompute} is {@code true} first calls {@link #computeView()} to define the
-   * Eye view matrix. Otherwise it returns the view matrix previously computed, e.g., as
-   * with {@link remixlab.dandelion.core.MatrixHelper#loadModelView()}.
-   *
-   * @see #getView()
-   * @see #getView(boolean)
-   * @see #getView(Mat)
-   * @see #getProjection()
-   * @see #getProjection(boolean)
-   * @see #getProjection(Mat, boolean)
-   */
-  public Mat getView(Mat m, boolean recompute) {
-    if (m == null)
-      m = new Mat();
-    if (recompute)
-      // May not be needed, but easier like this.
-      // Prevents from retrieving matrix in stereo mode -> overwrites shifted
-      // value.
-      computeView();
-    m.set(viewMat);
-    return m;
-  }
-
-  /**
-   * Convenience function that simply calls {@code fromView(mv, true)}.
-   *
-   * @see #fromView(Mat, boolean)
-   */
-  public void fromView(Mat mv) {
-    fromView(mv, true);
-  }
+  public abstract Mat computeView();
 
   /**
    * Sets the Eye {@link #position()} and {@link #orientation()} from an OpenGL-like View
    * matrix.
    * <p>
-   * After this method has been called, {@link #getView()} returns a matrix equivalent to
+   * After this method has been called, {@link #computeView()} returns a matrix equivalent to
    * {@code mv}. Only the {@link #position()} and {@link #orientation()} of the Eye are
    * modified.
    */
-  public abstract void fromView(Mat mv, boolean recompute);
+  public abstract void fromView(Mat mv);
 
   /**
    * Convenience function that simply returns {@code projectedCoordinatesOf(src, null)}.
@@ -1211,7 +1027,7 @@ public abstract class Eye implements Copyable {
    * is simpler and has been optimized by caching the Projection x View matrix.
    * <p>
    * <b>Attention:</b> This method only uses the intrinsic Eye parameters (see
-   * {@link #getView()}, {@link #getProjection()} and {@link #getViewport()}) and is
+   * {@link #computeView()}, {@link #computeProjection()} and {@link #getViewport()}) and is
    * completely independent of the processing matrices. You can hence define a virtual Eye
    * and use this method to compute projections out of a classical rendering context.
    *
@@ -1279,8 +1095,8 @@ public abstract class Eye implements Copyable {
    * <p>
    * {@link #projectedCoordinatesOf(Vec, Frame)} performs the inverse transformation.
    * <p>
-   * This method only uses the intrinsic Eye parameters (see {@link #getView()},
-   * {@link #getProjection()} and {@link #getViewport()}) and is completely independent of
+   * This method only uses the intrinsic Eye parameters (see {@link #computeView()},
+   * {@link #computeProjection()} and {@link #getViewport()}) and is completely independent of
    * the Processing matrices. You can hence define a virtual Eye and use this method to
    * compute un-projections out of a classical rendering context.
    * <p>
@@ -1355,7 +1171,7 @@ public abstract class Eye implements Copyable {
   // cached version
   public boolean project(Mat projectionViewMat, float objx, float objy, float objz, float[] windowCoordinate) {
     if (projectionViewMat == null)
-      projectionViewMat = Mat.multiply(projectionMat, viewMat);
+      projectionViewMat = Mat.multiply(computeProjection(), computeView());
 
     float in[] = new float[4];
     float out[] = new float[4];
@@ -1417,7 +1233,7 @@ public abstract class Eye implements Copyable {
   public boolean unproject(Mat projectionViewInverseMat, float winx, float winy, float winz, float[] objCoordinate) {
     if (projectionViewInverseMat == null) {
       projectionViewInverseMat = new Mat();
-      boolean projectionViewMatHasInverse = Mat.multiply(projectionMat, viewMat).invert(projectionViewInverseMat);
+      boolean projectionViewMatHasInverse = Mat.multiply(computeProjection(), computeView()).invert(projectionViewInverseMat);
       if (projectionViewMatHasInverse)
         return unproject(projectionViewInverseMat, winx, winy, winz, objCoordinate);
       else

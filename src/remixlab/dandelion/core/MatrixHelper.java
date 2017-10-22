@@ -16,23 +16,26 @@ import remixlab.util.Util;
 
 /**
  * Various matrix operations dandelion should support either through a third-party
- * implementation or locally through the {@link remixlab.dandelion.core.MatrixStackHelper}
- * .
+ * implementation or locally through the {@link remixlab.dandelion.core.MatrixStackHelper}.
  */
 public abstract class MatrixHelper {
   protected AbstractScene gScene;
 
+  Mat projection, view, modelview;
   protected Mat projectionViewMat, projectionViewInverseMat;
   protected boolean isProjViwInvCached, projectionViewMatHasInv;
 
   /**
-   * Instantiates the {@link #projectionView()} matrix and sets
+   * Instantiates matrices and sets
    * {@link #isProjectionViewInverseCached()} to {@code false}.
    *
    * @param scn
    */
   public MatrixHelper(AbstractScene scn) {
     gScene = scn;
+    projection = new Mat();
+    view = new Mat();
+    modelview = new Mat();
     projectionViewMat = new Mat();
     isProjViwInvCached = false;
   }
@@ -44,31 +47,106 @@ public abstract class MatrixHelper {
     return gScene;
   }
 
-  public void bind(boolean recompute) {
-    loadProjection(recompute);
-    loadModelView(recompute);
-    if (recompute)
-      cacheProjectionView();
-  }
-
   /**
-   * Load {@link #projection()} and {@link #modelView()} in
-   * {@link remixlab.dandelion.core.AbstractScene#preDraw()}.
+   * Binds matrices to (raster) renderer.
    */
   public void bind() {
-    bind(true);
+    cacheProjection(scene().eye().computeProjection());
+    cacheView(scene().eye().computeView());
+    cacheProjectionView(Mat.multiply(cacheProjection(), cacheView()));
+    bindProjection(cacheProjection());
+    bindModelView(cacheView());
   }
 
   /**
-   * Internal use. Called in {@link #bind()}. Note that P x V is always cached.
+   * @return projection matrix
    */
-  protected void cacheProjectionView() {
-    Mat.multiply(projection(), modelView(), projectionViewMat);
+  public Mat projection() {
+    return cacheProjection();
+  }
+
+  /**
+   * Binds the projection matrix to the renderer.
+   */
+  public void bindProjection(Mat m) {
+    cacheProjection(m);
+  }
+
+  /**
+   * Caches the projection matrix.
+   */
+  public final void cacheProjection(Mat m) {
+    projection.set(m);
+  }
+
+  /**
+   * Returns the cached projection matrix.
+   */
+  public final Mat cacheProjection() {
+    return projection;
+  }
+
+  /**
+   * @return view matrix
+   */
+  public Mat view() {
+    return cacheView();
+  }
+
+  /**
+   * Binds the view matrix to the renderer.
+   */
+  public void bindView(Mat m) {
+    cacheView(m);
+  }
+
+  /**
+   * Caches the view matrix.
+   */
+  public final void cacheView(Mat m) {
+    view.set(m);
+  }
+
+  /**
+   * Returns the cached view matrix.
+   */
+  public final Mat cacheView() {
+    return view;
+  }
+
+  /**
+   * @return modelview matrix
+   */
+  public Mat modelView() {
+    return modelview;
+  }
+
+  /**
+   * Binds the modelview matrix to the renderer.
+   */
+  public void bindModelView(Mat m) {
+    modelview.set(m);
+  }
+
+  /**
+   * Caches the projection * view matrix.
+   *
+   * @see #isProjectionViewInverseCached()
+   */
+  public final void cacheProjectionView(Mat pv) {
+    projectionViewMat.set(pv);
     if (isProjectionViewInverseCached()) {
       if (projectionViewInverseMat == null)
         projectionViewInverseMat = new Mat();
       projectionViewMatHasInv = projectionViewMat.invert(projectionViewInverseMat);
     }
+  }
+
+  /**
+   * Returns the cached projection times view matrix.
+   */
+  public final Mat cacheProjectionView() {
+    return projectionViewMat;
   }
 
   /**
@@ -95,68 +173,26 @@ public abstract class MatrixHelper {
   }
 
   /**
-   * @return {@link #projection()} * {@link #modelView()}.
+   * Returns the cached projection times view inverse matrix.
    */
-  public Mat projectionView() {
-    return projectionViewMat;
-  }
-
-  /**
-   * {@link #cacheProjectionViewInverse(boolean)} should be called first for this method
-   * to take effect.
-   *
-   * @return inv({@link #projection()} * {@link #modelView()})
-   */
-  public Mat projectionViewInverse() {
+  public final Mat cacheProjectionViewInverse() {
     if (!isProjectionViewInverseCached())
       throw new RuntimeException("optimizeUnprojectCache(true) should be called first");
     return projectionViewInverseMat;
   }
 
   /**
-   * Same as {@code setProjection(gScene.eye().getProjection(recompute))}.
-   *
-   * @see #setProjection(Mat)
-   * @see remixlab.dandelion.core.Eye#getProjection(boolean)
+   * Multiplies the current modelview matrix by the one specified through the parameters.
    */
-  public void loadProjection(boolean recompute) {
-    setProjection(gScene.eye().getProjection(recompute));
+  public void applyModelView(Mat source) {
+    modelview.apply(source);
   }
 
   /**
-   * Computes the projection matrix from
-   * {@link remixlab.dandelion.core.AbstractScene#eye()} parameters and loads it into the
-   * matrix helper. Used in {@link #bind()}.
-   *
-   * @see remixlab.dandelion.core.Eye#getProjection(boolean)
+   * Multiplies the current projection matrix by the one specified through the parameters.
    */
-  public void loadProjection() {
-    loadProjection(true);
-  }
-
-  /**
-   * Same as {@code setModelView(gScene.eye().getView(recompute))}.
-   *
-   * @see #setModelView(Mat)
-   * @see remixlab.dandelion.core.Eye#getView(boolean)
-   */
-  public void loadModelView(boolean recompute) {
-    setModelView(gScene.eye().getView(recompute));
-  }
-
-  /**
-   * Computes the view matrix from {@link remixlab.dandelion.core.AbstractScene#eye()}
-   * parameters and loads it into the matrix helper. Used in {@link #bind()}. If
-   * {@code includeView} is {@code false}
-   *
-   * @see remixlab.dandelion.core.Eye#getView(boolean)
-   */
-  public void loadModelView() {
-    loadModelView(true);
-    // other way is to compute view but load identity. Maybe usfull for a webgl
-    // context?
-    // scene.eye().computeView();
-    // resetModelView();// loads identity -> only model, (excludes view)
+  public void applyProjection(Mat source) {
+    projection.apply(source);
   }
 
   /**
@@ -185,27 +221,6 @@ public abstract class MatrixHelper {
    */
   public void popProjection() {
     AbstractScene.showMissingImplementationWarning("popProjection", getClass().getName());
-  }
-
-  /**
-   * Set the current projection matrix to identity.
-   */
-  public void resetProjection() {
-    AbstractScene.showMissingImplementationWarning("resetProjection", getClass().getName());
-  }
-
-  /**
-   * Multiplies the current projection matrix by the one specified through the parameters.
-   */
-  public void applyProjection(Mat source) {
-    AbstractScene.showMissingImplementationWarning("applyProjection", getClass().getName());
-  }
-
-  /**
-   * Set the current projection matrix to the contents of another.
-   */
-  public void setProjection(Mat source) {
-    AbstractScene.showMissingImplementationWarning("setProjection", getClass().getName());
   }
 
   /**
@@ -288,61 +303,6 @@ public abstract class MatrixHelper {
   }
 
   /**
-   * Set the current modelview matrix to identity.
-   */
-  public abstract void resetModelView();
-
-  /**
-   * Multiplies the current modelview matrix by the one specified through the parameters.
-   */
-  public abstract void applyModelView(Mat source);
-
-  /**
-   * @return modelview matrix
-   */
-  public abstract Mat modelView();
-
-  /**
-   * Copy the current modelview matrix into the specified target. Pass in null to create a
-   * new matrix.
-   */
-  public abstract Mat getModelView(Mat target);
-
-  /**
-   * @return projection matrix
-   */
-  public Mat projection() {
-    AbstractScene.showMissingImplementationWarning("projection", getClass().getName());
-    return null;
-  }
-
-  /**
-   * Copy the current projection matrix into the specified target. Pass in null to create
-   * a new matrix.
-   */
-  public Mat getProjection(Mat target) {
-    AbstractScene.showMissingImplementationWarning("getProjection", getClass().getName());
-    return null;
-  }
-
-  /**
-   * Set the current modelview matrix to the contents of another.
-   */
-  public abstract void setModelView(Mat source);
-
-  /**
-   * Print the current modelview matrix.
-   */
-  public abstract void printModelView();
-
-  /**
-   * Print the current projection matrix.
-   */
-  public void printProjection() {
-    AbstractScene.showMissingImplementationWarning("printProjection", getClass().getName());
-  }
-
-  /**
    * Computes the world coordinates of an screen object so that drawing can be done
    * directly with 2D screen coordinates.
    * <p>
@@ -395,7 +355,7 @@ public abstract class MatrixHelper {
     float tz = -(far + near) / (far - near);
 
     // The minus sign is needed to invert the Y axis.
-    setProjection(new Mat(x, 0, 0, 0, 0, -y, 0, 0, 0, 0, z, 0, tx, ty, tz, 1));
+    bindProjection(new Mat(x, 0, 0, 0, 0, -y, 0, 0, 0, 0, z, 0, tx, ty, tz, 1));
   }
 
   // as it's done in P5:
@@ -459,7 +419,6 @@ public abstract class MatrixHelper {
     float tz = -eyeZ;
 
     mv.translate(tx, ty, tz);
-
-    setModelView(mv);
+    bindModelView(mv);
   }
 }

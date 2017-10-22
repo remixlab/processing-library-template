@@ -125,8 +125,6 @@ public class Camera extends Eye implements Copyable {
     setPhysicalDistanceToScreen(0.5f);
     setPhysicalScreenWidth(0.4f);
     // focusDistance is set from setFieldOfView()
-
-    computeProjection();
   }
 
   protected Camera(Camera oCam) {
@@ -913,7 +911,9 @@ public class Camera extends Eye implements Copyable {
   // 8. MATRICES
 
   @Override
-  public void computeView() {
+  public Mat computeView() {
+    Mat m = new Mat();
+
     Quat q = (Quat) frame().orientation();
 
     float q00 = 2.0f * q.quat[0] * q.quat[0];
@@ -928,27 +928,29 @@ public class Camera extends Eye implements Copyable {
     float q13 = 2.0f * q.quat[1] * q.quat[3];
     float q23 = 2.0f * q.quat[2] * q.quat[3];
 
-    viewMat.mat[0] = 1.0f - q11 - q22;
-    viewMat.mat[1] = q01 - q23;
-    viewMat.mat[2] = q02 + q13;
-    viewMat.mat[3] = 0.0f;
+    m.mat[0] = 1.0f - q11 - q22;
+    m.mat[1] = q01 - q23;
+    m.mat[2] = q02 + q13;
+    m.mat[3] = 0.0f;
 
-    viewMat.mat[4] = q01 + q23;
-    viewMat.mat[5] = 1.0f - q22 - q00;
-    viewMat.mat[6] = q12 - q03;
-    viewMat.mat[7] = 0.0f;
+    m.mat[4] = q01 + q23;
+    m.mat[5] = 1.0f - q22 - q00;
+    m.mat[6] = q12 - q03;
+    m.mat[7] = 0.0f;
 
-    viewMat.mat[8] = q02 - q13;
-    viewMat.mat[9] = q12 + q03;
-    viewMat.mat[10] = 1.0f - q11 - q00;
-    viewMat.mat[11] = 0.0f;
+    m.mat[8] = q02 - q13;
+    m.mat[9] = q12 + q03;
+    m.mat[10] = 1.0f - q11 - q00;
+    m.mat[11] = 0.0f;
 
     Vec t = q.inverseRotate(frame().position());
 
-    viewMat.mat[12] = -t.vec[0];
-    viewMat.mat[13] = -t.vec[1];
-    viewMat.mat[14] = -t.vec[2];
-    viewMat.mat[15] = 1.0f;
+    m.mat[12] = -t.vec[0];
+    m.mat[13] = -t.vec[1];
+    m.mat[14] = -t.vec[2];
+    m.mat[15] = 1.0f;
+
+    return m;
   }
 
   /**
@@ -986,43 +988,44 @@ public class Camera extends Eye implements Copyable {
   }
 
   @Override
-  public void computeProjection() {
+  public Mat computeProjection() {
+    Mat m = new Mat();
     float ZNear = zNear();
     float ZFar = zFar();
 
     switch (type()) {
       case PERSPECTIVE:
         // #CONNECTION# all non null coefficients were set to 0.0 in constructor.
-        projectionMat.mat[0] = 1 / (frame().magnitude() * this.aspectRatio());
-        projectionMat.mat[5] = 1 / (gScene.isLeftHanded() ? -frame().magnitude() : frame().magnitude());
-        projectionMat.mat[10] = (ZNear + ZFar) / (ZNear - ZFar);
-        projectionMat.mat[11] = -1.0f;
-        projectionMat.mat[14] = 2.0f * ZNear * ZFar / (ZNear - ZFar);
-        projectionMat.mat[15] = 0.0f;
+        m.mat[0] = 1 / (frame().magnitude() * this.aspectRatio());
+        m.mat[5] = 1 / (gScene.isLeftHanded() ? -frame().magnitude() : frame().magnitude());
+        m.mat[10] = (ZNear + ZFar) / (ZNear - ZFar);
+        m.mat[11] = -1.0f;
+        m.mat[14] = 2.0f * ZNear * ZFar / (ZNear - ZFar);
+        m.mat[15] = 0.0f;
         // same as gluPerspective( 180.0*fieldOfView()/M_PI, aspectRatio(),
         // zNear(), zFar() );
         break;
       case ORTHOGRAPHIC:
         float[] wh = getBoundaryWidthHeight();
-        projectionMat.mat[0] = 1.0f / wh[0];
-        projectionMat.mat[5] = (gScene.isLeftHanded() ? -1.0f : 1.0f) / wh[1];
-        projectionMat.mat[10] = -2.0f / (ZFar - ZNear);
-        projectionMat.mat[11] = 0.0f;
-        projectionMat.mat[14] = -(ZFar + ZNear) / (ZFar - ZNear);
-        projectionMat.mat[15] = 1.0f;
+        m.mat[0] = 1.0f / wh[0];
+        m.mat[5] = (gScene.isLeftHanded() ? -1.0f : 1.0f) / wh[1];
+        m.mat[10] = -2.0f / (ZFar - ZNear);
+        m.mat[11] = 0.0f;
+        m.mat[14] = -(ZFar + ZNear) / (ZFar - ZNear);
+        m.mat[15] = 1.0f;
         // same as glOrtho( -w, w, -h, h, zNear(), zFar() );
         break;
     }
+
+    return m;
   }
 
   @Override
-  public void fromView(Mat mv, boolean recompute) {
+  public void fromView(Mat mv) {
     Quat q = new Quat();
     q.fromMatrix(mv);
     setOrientation(q);
     setPosition(Vec.multiply(q.rotate(new Vec(mv.mat[12], mv.mat[13], mv.mat[14])), -1));
-    if (recompute)
-      this.computeView();
   }
 
   // 9. WORLD -> CAMERA

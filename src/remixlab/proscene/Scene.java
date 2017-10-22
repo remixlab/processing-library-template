@@ -1194,7 +1194,7 @@ public class Scene extends AbstractScene implements PConstants {
    * Called before your main drawing and performs the following:
    * <ol>
    * <li>Handles the {@link #avatar()}</li>
-   * <li>Calls {@link #bindMatrices()}</li>
+   * <li>Calls {@link MatrixHelper#bind()}</li>
    * <li>Calls {@link remixlab.dandelion.core.Eye#updateBoundaryEquations()} if
    * {@link #areBoundaryEquationsEnabled()}</li>
    * <li>Calls {@link #proscenium()}</li>
@@ -1215,7 +1215,7 @@ public class Scene extends AbstractScene implements PConstants {
     if (avatar() != null && (!eye().anyInterpolationStarted()))
       eye().frame().setWorldMatrix(avatar().trackingEyeFrame());
     // 2. Eye
-    bindMatrices();
+    matrixHelper().bind();
     if (areBoundaryEquationsEnabled() && (eye().lastUpdate() > lastEqUpdate || lastEqUpdate == 0)) {
       eye().updateBoundaryEquations();
       lastEqUpdate = frameCount;
@@ -1865,7 +1865,7 @@ public class Scene extends AbstractScene implements PConstants {
    * This method is implementing by simply calling
    * {@link remixlab.dandelion.core.AbstractScene#traverseTree()}.
    * <p>
-   * <b>Attention:</b> this method should be called after {@link #bindMatrices()} (i.e.,
+   * <b>Attention:</b> this method should be called after {@link MatrixHelper#bind()} (i.e.,
    * eye update which happens at {@link #preDraw()}) and before any other transformation
    * of the modelview takes place.
    *
@@ -1926,8 +1926,8 @@ public class Scene extends AbstractScene implements PConstants {
   /**
    * Same as {@code matrixHelper(pgraphics).bind(false)}. Set the {@code pgraphics}
    * matrices by calling
-   * {@link remixlab.dandelion.core.MatrixHelper#loadProjection(boolean)} and
-   * {@link remixlab.dandelion.core.MatrixHelper#loadModelView(boolean)} (only makes sense
+   * {@link remixlab.dandelion.core.MatrixHelper#bindProjection(Mat)} and
+   * {@link remixlab.dandelion.core.MatrixHelper#bindModelView(Mat)} (only makes sense
    * when {@link #pg()} is different than {@code pgraphics}).
    * <p>
    * This method doesn't perform any computation, but simple retrieve the current matrices
@@ -1936,7 +1936,11 @@ public class Scene extends AbstractScene implements PConstants {
   public void bindMatrices(PGraphics pgraphics) {
     if (this.pg() == pgraphics)
       return;
-    matrixHelper(pgraphics).bind(false);
+    MatrixHelper mh = matrixHelper(pgraphics);
+    mh.bindProjection(projection());
+    mh.bindView(view());
+    mh.cacheProjectionView();
+    mh.bindModelView(view());
   }
 
   @Override

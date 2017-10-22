@@ -22,7 +22,6 @@ import remixlab.fpstiming.Animator;
 import remixlab.fpstiming.AnimatorObject;
 import remixlab.fpstiming.TimingHandler;
 import remixlab.fpstiming.TimingTask;
-import sun.net.www.content.text.Generic;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -248,7 +247,7 @@ public abstract class AbstractScene extends AnimatorObject implements Grabber {
    * <p>
    * Note that only reachable frames are visited by this algorithm.
    * <p>
-   * <b>Attention:</b> this method should be called after {@link #bindMatrices()} (i.e.,
+   * <b>Attention:</b> this method should be called after {@link MatrixHelper#bind()} (i.e.,
    * eye update) and before any other transformation of the modelview takes place.
    *
    * @see #isFrameReachable(GenericFrame)
@@ -992,13 +991,6 @@ public abstract class AbstractScene extends AnimatorObject implements Grabber {
   }
 
   /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#bind()}
-   */
-  protected void bindMatrices() {
-    matrixHelper.bind();
-  }
-
-  /**
    * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#pushModelView()}
    */
   public void pushModelView() {
@@ -1099,34 +1091,6 @@ public abstract class AbstractScene extends AnimatorObject implements Grabber {
   }
 
   /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#resetModelView()}
-   */
-  public void resetModelView() {
-    matrixHelper.resetModelView();
-  }
-
-  /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#resetProjection()}
-   */
-  public void resetProjection() {
-    matrixHelper.resetProjection();
-  }
-
-  /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#applyModelView(Mat)}
-   */
-  public void applyModelView(Mat source) {
-    matrixHelper.applyModelView(source);
-  }
-
-  /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#applyProjection(Mat)}
-   */
-  public void applyProjection(Mat source) {
-    matrixHelper.applyProjection(source);
-  }
-
-  /**
    * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#modelView()}
    */
   public Mat modelView() {
@@ -1141,45 +1105,38 @@ public abstract class AbstractScene extends AnimatorObject implements Grabber {
   }
 
   /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#getModelView(Mat)}
+   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#projection()}
    */
-  public Mat getModelView(Mat target) {
-    return matrixHelper.getModelView(target);
+  public Mat view() {
+    return matrixHelper.view();
   }
 
   /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#getProjection(Mat)}
-   */
-  public Mat getProjection(Mat target) {
-    return matrixHelper.getProjection(target);
-  }
-
-  /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#setModelView(Mat)}
+   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#bindModelView(Mat)}
    */
   public void setModelView(Mat source) {
-    matrixHelper.setModelView(source);
+    matrixHelper.bindModelView(source);
   }
 
   /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#setProjection(Mat)}
+   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#bindProjection(Mat)}
    */
   public void setProjection(Mat source) {
-    matrixHelper.setProjection(source);
+    matrixHelper.bindProjection(source);
   }
 
   /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#printModelView()}
+   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#applyModelView(Mat)}
    */
-  public void printModelView() {
-    matrixHelper.printModelView();
+  public void applyModelView(Mat source) {
+    matrixHelper.applyModelView(source);
   }
 
   /**
-   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#printProjection()}
+   * Wrapper for {@link remixlab.dandelion.core.MatrixHelper#applyProjection(Mat)}
    */
-  public void printProjection() {
-    matrixHelper.printProjection();
+  public void applyProjection(Mat source) {
+    matrixHelper.applyProjection(source);
   }
 
   /**
@@ -1395,7 +1352,7 @@ public abstract class AbstractScene extends AnimatorObject implements Grabber {
    * Called before your main drawing and performs the following:
    * <ol>
    * <li>Handles the {@link #avatar()}</li>
-   * <li>Calls {@link #bindMatrices()}</li>
+   * <li>Calls {@link MatrixHelper#bind()}</li>
    * <li>Calls {@link remixlab.dandelion.core.Eye#updateBoundaryEquations()} if
    * {@link #areBoundaryEquationsEnabled()}</li>
    * <li>Calls {@link #proscenium()}</li>
@@ -1408,8 +1365,8 @@ public abstract class AbstractScene extends AnimatorObject implements Grabber {
     // 1. Avatar
     if (avatar() != null && (!eye().anyInterpolationStarted()))
       eye().frame().setWorldMatrix(avatar().trackingEyeFrame());
-    // 2. Eye
-    bindMatrices();
+    // 2. Eye, raster scene
+    matrixHelper().bind();
     if (areBoundaryEquationsEnabled() && (eye().lastUpdate() > lastEqUpdate || lastEqUpdate == 0)) {
       eye().updateBoundaryEquations();
       lastEqUpdate = frameCount;
@@ -2320,20 +2277,20 @@ public abstract class AbstractScene extends AnimatorObject implements Grabber {
    * Same as {@link remixlab.dandelion.core.Eye#projectedCoordinatesOf(Mat, Vec)}.
    */
   public Vec projectedCoordinatesOf(Vec src) {
-    return eye().projectedCoordinatesOf(this.matrixHelper().projectionView(), src);
+    return eye().projectedCoordinatesOf(this.matrixHelper().cacheProjectionView(), src);
   }
 
   /**
    * If {@link remixlab.dandelion.core.MatrixHelper#isProjectionViewInverseCached()}
    * (cache version) returns
    * {@link remixlab.dandelion.core.Eye#unprojectedCoordinatesOf(Mat, Vec)} (Mat is
-   * {@link remixlab.dandelion.core.MatrixHelper#projectionViewInverse()}). Otherwise
+   * {@link remixlab.dandelion.core.MatrixHelper#cacheProjectionViewInverse()}). Otherwise
    * (non-cache version) returns
    * {@link remixlab.dandelion.core.Eye#unprojectedCoordinatesOf(Vec)}.
    */
   public Vec unprojectedCoordinatesOf(Vec src) {
     if (isUnprojectedCoordinatesOfOptimized())
-      return eye().unprojectedCoordinatesOf(this.matrixHelper().projectionViewInverse(), src);
+      return eye().unprojectedCoordinatesOf(this.matrixHelper().cacheProjectionViewInverse(), src);
     else
       return eye().unprojectedCoordinatesOf(src);
   }
@@ -2651,7 +2608,7 @@ public abstract class AbstractScene extends AnimatorObject implements Grabber {
    * overload, but no if you instantiate your own Scene object (for instance, in
    * Processing you should just overload {@code PApplet.draw()} to define your scene).
    * <p>
-   * The eye matrices set in {@link #bindMatrices()} converts from the world to the camera
+   * The eye matrices set in {@link MatrixHelper#bind()} converts from the world to the camera
    * coordinate systems. Thus vertices given here can then be considered as being given in
    * the world coordinate system. The eye is moved in this world using the mouse. This
    * representation is much more intuitive than a camera-centric system (which for

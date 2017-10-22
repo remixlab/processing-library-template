@@ -13,7 +13,7 @@ public class BasicUse extends PApplet {
   float length = 100;
 
   public void settings() {
-    size(800, 800, P2D);
+    size(800, 800, JAVA2D);
   }
 
   public void setup() {

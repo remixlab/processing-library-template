@@ -2,6 +2,7 @@ package frame;
 
 import processing.core.PApplet;
 import remixlab.dandelion.geom.Mat;
+import remixlab.dandelion.geom.Quat;
 import remixlab.dandelion.geom.Vec;
 import remixlab.proscene.Scene;
 
@@ -58,11 +59,18 @@ public class CajasOrientadas extends PApplet {
       println("papplet's frame count: " + frameCount);
       println("scene's frame count: " + scene.timingHandler().frameCount());
       Mat view = new Mat();
-      scene.camera().getView(view, false);
+      scene.view();
       println("reported view: ");
       view.print();
-      scene.camera().fromView(view, true);
-      scene.camera().getView(view, false);
+
+      //scene.camera().fromView(view, true);
+      //scene.camera().getView(view, false);
+      Quat q = new Quat();
+      q.fromMatrix(view);
+      scene.eyeFrame().setOrientation(q);
+      scene.eyeFrame().setPosition(Vec.multiply(q.rotate(new Vec(view.mat[12], view.mat[13], view.mat[14])), -1));
+      view = scene.eye().computeView();
+
       println("after setting from external: ");
       view.print();
     }
