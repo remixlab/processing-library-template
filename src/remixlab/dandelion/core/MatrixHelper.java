@@ -16,14 +16,21 @@ import remixlab.util.Util;
 
 /**
  * Various matrix operations dandelion should support either through a third-party
- * implementation or locally through the {@link remixlab.dandelion.core.MatrixStackHelper}.
+ * implementation or locally.
  */
-public abstract class MatrixHelper {
+public class MatrixHelper {
   protected AbstractScene gScene;
-
-  Mat projection, view, modelview;
+  protected Mat projection, view, modelview;
   protected Mat projectionViewMat, projectionViewInverseMat;
   protected boolean isProjViwInvCached, projectionViewMatHasInv;
+
+  static final int MATRIX_STACK_DEPTH = 32;
+  static final String ERROR_PUSHMATRIX_OVERFLOW = "Too many calls to pushModelView().";
+  static final String ERROR_PUSHMATRIX_UNDERFLOW = "Too many calls to popModelView(), and not enough to pushModelView().";
+  float[][] matrixStack = new float[MATRIX_STACK_DEPTH][16];
+  int matrixStackDepth;
+  float[][] pmatrixStack = new float[MATRIX_STACK_DEPTH][16];
+  int pmatrixStackDepth;
 
   /**
    * Instantiates matrices and sets
@@ -199,42 +206,36 @@ public abstract class MatrixHelper {
    * Push a copy of the modelview matrix onto the stack.
    */
   public void pushModelView() {
-    AbstractScene.showMissingImplementationWarning("pushModelView", getClass().getName());
+    if (matrixStackDepth == MATRIX_STACK_DEPTH) {
+      throw new RuntimeException(ERROR_PUSHMATRIX_OVERFLOW);
+    }
+    modelview.get(matrixStack[matrixStackDepth]);
+    matrixStackDepth++;
   }
 
   /**
    * Replace the current modelview matrix with the top of the stack.
    */
   public void popModelView() {
-    AbstractScene.showMissingImplementationWarning("popModelView", getClass().getName());
-  }
-
-  /**
-   * Push a copy of the projection matrix onto the stack.
-   */
-  public void pushProjection() {
-    AbstractScene.showMissingImplementationWarning("pushProjection", getClass().getName());
-  }
-
-  /**
-   * Replace the current projection matrix with the top of the stack.
-   */
-  public void popProjection() {
-    AbstractScene.showMissingImplementationWarning("popProjection", getClass().getName());
+    if (matrixStackDepth == 0) {
+      throw new RuntimeException(ERROR_PUSHMATRIX_UNDERFLOW);
+    }
+    matrixStackDepth--;
+    modelview.set(matrixStack[matrixStackDepth]);
   }
 
   /**
    * Translate in X and Y.
    */
   public void translate(float tx, float ty) {
-    AbstractScene.showMissingImplementationWarning("translate", getClass().getName());
+    translate(tx, ty, 0);
   }
 
   /**
    * Translate in X, Y, and Z.
    */
   public void translate(float tx, float ty, float tz) {
-    AbstractScene.showMissingImplementationWarning("translate", getClass().getName());
+    modelview.translate(tx, ty, tz);
   }
 
   /**
@@ -247,42 +248,42 @@ public abstract class MatrixHelper {
    * <A HREF="http://www.xkcd.com/c184.html">Additional background</A>.
    */
   public void rotate(float angle) {
-    AbstractScene.showMissingImplementationWarning("rotate", getClass().getName());
+    rotateZ(angle);
   }
 
   /**
    * Rotate around the X axis.
    */
   public void rotateX(float angle) {
-    AbstractScene.showMissingImplementationWarning("rotateX", getClass().getName());
+    modelview.rotateX(angle);
   }
 
   /**
    * Rotate around the Y axis.
    */
   public void rotateY(float angle) {
-    AbstractScene.showMissingImplementationWarning("rotateY", getClass().getName());
+    modelview.rotateY(angle);
   }
 
   /**
    * Rotate around the Z axis.
    */
   public void rotateZ(float angle) {
-    AbstractScene.showMissingImplementationWarning("rotateZ", getClass().getName());
+    modelview.rotateZ(angle);
   }
 
   /**
    * Rotate about a vector in space. Same as the glRotatef() function.
    */
-  public void rotate(float angle, float vx, float vy, float vz) {
-    AbstractScene.showMissingImplementationWarning("rotate", getClass().getName());
+  public void rotate(float angle, float v0, float v1, float v2) {
+    modelview.rotate(angle, v0, v1, v2);
   }
 
   /**
    * Scale equally in all dimensions.
    */
   public void scale(float s) {
-    AbstractScene.showMissingImplementationWarning("scale", getClass().getName());
+    scale(s, s, s);
   }
 
   /**
@@ -292,14 +293,36 @@ public abstract class MatrixHelper {
    * there's no way to know what else to scale it by.
    */
   public void scale(float sx, float sy) {
-    AbstractScene.showMissingImplementationWarning("scale", getClass().getName());
+    scale(sx, sy, 1);
   }
 
   /**
    * Scale in X, Y, and Z.
    */
   public void scale(float x, float y, float z) {
-    AbstractScene.showMissingImplementationWarning("scale", getClass().getName());
+    modelview.scale(x, y, z);
+  }
+
+  /**
+   * Push a copy of the projection matrix onto the stack.
+   */
+  public void pushProjection() {
+    if (pmatrixStackDepth == MATRIX_STACK_DEPTH) {
+      throw new RuntimeException(ERROR_PUSHMATRIX_OVERFLOW);
+    }
+    projection.get(pmatrixStack[pmatrixStackDepth]);
+    pmatrixStackDepth++;
+  }
+
+  /**
+   * Replace the current projection matrix with the top of the stack.
+   */
+  public void popProjection() {
+    if (pmatrixStackDepth == 0) {
+      throw new RuntimeException(ERROR_PUSHMATRIX_UNDERFLOW);
+    }
+    pmatrixStackDepth--;
+    projection.set(pmatrixStack[pmatrixStackDepth]);
   }
 
   /**

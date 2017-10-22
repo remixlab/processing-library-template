@@ -56,7 +56,7 @@ import java.util.List;
  * (default) {@link #motionAgent()} and a (default) {@link #keyboardAgent()} which should
  * be instantiated by derived classes at construction time.</li>
  * <li>A {@link #matrixHelper()} which handles matrix operations either through the
- * {@link remixlab.dandelion.core.MatrixStackHelper} or through a third party matrix stack
+ * {@link remixlab.dandelion.core.MatrixHelper} or through a third party matrix stack
  * (like it's done with Processing). For details please refer to the
  * {@link remixlab.dandelion.core.MatrixHelper} interface.</li>
  * </ol>
@@ -152,7 +152,7 @@ public abstract class AbstractScene extends AnimatorObject implements Grabber {
 
   /**
    * Default constructor which defines a right-handed OpenGL compatible Scene with its own
-   * {@link remixlab.dandelion.core.MatrixStackHelper}. The constructor also instantiates
+   * {@link remixlab.dandelion.core.MatrixHelper}. The constructor also instantiates
    * the {@link #inputHandler()} and the {@link #timingHandler()}, and sets the AXES and
    * GRID visual hint flags.
    * <p>
@@ -183,7 +183,7 @@ public abstract class AbstractScene extends AnimatorObject implements Grabber {
     setTimingHandler(new TimingHandler(this));
     deltaCount = frameCount;
     iHandler = new InputHandler();
-    setMatrixHelper(new MatrixStackHelper(this));
+    setMatrixHelper(new MatrixHelper(this));
     setRightHanded();
     setVisualHints(AXES | GRID);
     upperLeftCorner = new Point(0, 0);
