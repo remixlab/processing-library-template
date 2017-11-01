@@ -272,7 +272,7 @@ public class KeyFrameInterpolator implements Copyable {
     gScene = scn;
     keyFrameList = new ArrayList<KeyFrame>();
     path = new ArrayList<Frame>();
-    mainFrame = null;
+    setFrame(frame);
     period = 40;
     interpolationTm = 0.0f;
     interpolationSpd = 1.0f;
@@ -281,7 +281,6 @@ public class KeyFrameInterpolator implements Copyable {
     pathIsValid = false;
     valuesAreValid = true;
     currentFrmValid = false;
-    setFrame(frame);
 
     currentFrame0 = keyFrameList.listIterator();
     currentFrame1 = keyFrameList.listIterator();
