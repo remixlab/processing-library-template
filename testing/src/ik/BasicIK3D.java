@@ -29,7 +29,7 @@ public class BasicIK3D extends PApplet {
 
 
     public void settings() {
-        size(800, 800, P3D);
+        size(700, 700, P3D);
     }
 
     public void setup() {
@@ -38,12 +38,13 @@ public class BasicIK3D extends PApplet {
         scene.setAxesVisualHint(true);
 
         target = new InteractiveFrame(scene, "targetGraphics");
-        target.translate(new Vec((num_joints * boneLength - 100)+25, 0,0 ));
+        target.translate(0, 0,0 );
 
-        //Three identical chains that will have different constraints
-        ArrayList<GenericFrame> branchUnconstrained = generateChain(num_joints, boneLength, new Vec(-100, -75, 0));
-        ArrayList<GenericFrame> branchEllipseConstraint = generateChain(num_joints, boneLength, new Vec(-100, 0, 0));
-        ArrayList<GenericFrame> branchPolygonalConstraints = generateChain(num_joints, boneLength, new Vec(-100, 75, 0));
+        //Four identical chains that will have different constraints
+        ArrayList<GenericFrame> branchUnconstrained = generateChain(num_joints, boneLength, new Vec(-scene.radius(), -scene.radius(), 0));
+        ArrayList<GenericFrame> branchEllipseConstraint = generateChain(num_joints, boneLength, new Vec(-scene.radius(), scene.radius(), 0));
+        ArrayList<GenericFrame> branchPlanarConstraints = generateChain(num_joints, boneLength, new Vec(scene.radius(), -scene.radius(), 0));
+        ArrayList<GenericFrame> branchSphericalConstraints = generateChain(num_joints, boneLength, new Vec(scene.radius(), scene.radius(), 0));
 
         //Apply Constraints
 
@@ -58,17 +59,33 @@ public class BasicIK3D extends PApplet {
 
         //Define the Base (Any Polygon in clockwise or Counterclockwise order)
         ArrayList<Vec> vertices = new ArrayList<Vec>();
-        vertices.add(new Vec(-8,8));
-        vertices.add(new Vec(8, 8));
-        vertices.add(new Vec(8,-8));
-        vertices.add(new Vec(-8,-8));
+        vertices.add(new Vec(-10,-10));
+        vertices.add(new Vec(10,-10));
+        vertices.add(new Vec(10, 10));
+        vertices.add(new Vec(-10,10));
 
-        for (int i = 1; i < branchPolygonalConstraints.size()-1; i++) {
+        for (int i = 1; i < branchPlanarConstraints.size()-1; i++) {
             PlanarPolygon constraint = new PlanarPolygon(vertices);
             constraint.setHeight(boneLength/2.f);
-            constraint.setRestRotation((Quat) branchPolygonalConstraints.get(i).rotation().get());
-            branchPolygonalConstraints.get(i).setConstraint(constraint);
+            constraint.setRestRotation((Quat) branchPlanarConstraints.get(i).rotation().get());
+            branchPlanarConstraints.get(i).setConstraint(constraint);
         }
+
+        //Define the Base (Any Polygon in Counterclockwise order)
+        ArrayList<Vec> verticesSpherical = new ArrayList<Vec>();
+        int numVertices = 12;
+        for(int i = 0; i < numVertices; i++){
+            float step = i*(2*PI/(float)numVertices);
+            verticesSpherical.add(new Vec(cos(step),sin(step), random(0,1)));
+        }
+
+        for (int i = 1; i < branchSphericalConstraints.size()-1; i++) {
+            SphericalPolygon constraint = new SphericalPolygon(verticesSpherical);
+            constraint.setRestRotation((Quat) branchSphericalConstraints.get(i).rotation().get());
+            branchSphericalConstraints.get(i).setConstraint(constraint);
+        }
+
+        aux = branchSphericalConstraints.get(1);
 
         Solver solverUnconstrained = scene.setIKStructure(branchUnconstrained.get(0));
         scene.addIKTarget(branchUnconstrained.get(branchUnconstrained.size()-1), target);
@@ -78,9 +95,13 @@ public class BasicIK3D extends PApplet {
         scene.addIKTarget(branchEllipseConstraint.get(branchEllipseConstraint.size()-1), target);
         solverEllipseConstraint.setTIMESPERFRAME(TimesPerFrame);
 
-        Solver solverPolygonalConstraints = scene.setIKStructure(branchPolygonalConstraints.get(0));
-        scene.addIKTarget(branchPolygonalConstraints.get(branchPolygonalConstraints.size()-1), target);
-        solverPolygonalConstraints.setTIMESPERFRAME(TimesPerFrame);
+        Solver solverPlanarConstraints = scene.setIKStructure(branchPlanarConstraints.get(0));
+        scene.addIKTarget(branchPlanarConstraints.get(branchPlanarConstraints.size()-1), target);
+        solverPlanarConstraints.setTIMESPERFRAME(TimesPerFrame);
+
+        Solver solverSphericalConstraints = scene.setIKStructure(branchSphericalConstraints.get(0));
+        scene.addIKTarget(branchSphericalConstraints.get(branchSphericalConstraints.size()-1), target);
+        solverSphericalConstraints.setTIMESPERFRAME(TimesPerFrame);
     }
 
     public ArrayList<GenericFrame> generateChain(int num_joints, float boneLength, Vec translation){
@@ -100,7 +121,7 @@ public class BasicIK3D extends PApplet {
             prevFrame = iFrame;
         }
         //Consider Standard Form: Parent Z Axis is Pointing at its Child
-        chainRoot.translate(translation);
+        chainRoot.setTranslation(translation);
         chainRoot.setupHierarchy();
         return scene.branch(chainRoot, false);
     }
@@ -136,6 +157,7 @@ public class BasicIK3D extends PApplet {
 
     public void draw() {
         background(0);
+        lights();
         //Draw Constraints
         for(InteractiveFrame frame : scene.frames()){
             frame.draw();
@@ -151,6 +173,10 @@ public class BasicIK3D extends PApplet {
                     reference.rotate(((PlanarPolygon)frame.constraint()).getRestRotation());
                     scene.applyWorldTransformation(reference);
                     drawCone(((PlanarPolygon)frame.constraint()).getHeight(),((PlanarPolygon)frame.constraint()).getVertices());
+                }else if(frame.constraint() instanceof SphericalPolygon){
+                    reference.rotate(((SphericalPolygon)frame.constraint()).getRestRotation());
+                    scene.applyWorldTransformation(reference);
+                    drawCone(((SphericalPolygon)frame.constraint()).getVertices(),boneLength);
                 }
                 popStyle();
                 popMatrix();
@@ -194,7 +220,29 @@ public class BasicIK3D extends PApplet {
         popStyle();
     }
 
+    public void drawCone(ArrayList<Vec> vertices, float scale){
+        pushStyle();
+        noStroke();
+        fill(246,117,19,80);
+        beginShape(PApplet.TRIANGLE_FAN);
+        vertex(0, 0, 0);
+        for (Vec v : vertices) {
+            vertex( scale*v.x(), scale*v.y(), scale*v.z());
+        }
+        if(!vertices.isEmpty()) vertex( scale*vertices.get(0).x(), scale*vertices.get(0).y(), scale*vertices.get(0).z());
+        endShape();
+        popStyle();
+    }
+
+    Frame aux;
+
     public static void main(String args[]) {
         PApplet.main(new String[]{"ik.BasicIK3D"});
+    }
+
+    public void keyPressed(){
+        if(key == 'z'){
+            aux.rotate(new Quat(new Vec(0,1, 0), radians(5)));
+        }
     }
 }

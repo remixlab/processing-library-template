@@ -7,24 +7,28 @@ import remixlab.dandelion.geom.Vec;
 
 import java.util.ArrayList;
 
-import static java.lang.Math.PI;
-
 /**
- * Created by sebchaparr on 19/08/17.
+ * Created by sebchaparr on 30/08/17.
  */
-public class PlanarPolygon extends Constraint{
+public class SphericalPolygon extends Constraint{
     /*
     TODO: Enable Setting different Axis Direction
     * With this Kind of Constraint no Translation is allowed
-    * and the rotation depends on a Cone which base is a Polygon. This kind of constraint always
+    * and the rotation depends on a Cone which base is a Spherical Polygon. This kind of constraint always
     * look for the reference frame (local constraint), if no initial position is
     * set a Quat() is assumed as rest position
     * */
 
     private ArrayList<Vec> vertices = new ArrayList<Vec>();
-    private float height = 1.f;
+    private Vec visiblePoint = new Vec();
     private Quat restRotation = new Quat();
     private Vec min, max;
+
+    //Some pre-computations
+    private ArrayList<Vec> B= new ArrayList<Vec>();
+    private ArrayList<Vec> S = new ArrayList<Vec>();
+
+
 
     public Quat getRestRotation() {
         return restRotation;
@@ -38,42 +42,41 @@ public class PlanarPolygon extends Constraint{
     }
 
     public void setVertices(ArrayList<Vec> vertices) {
-        this.vertices = vertices;
+        this.vertices = projectToUnitSphere(vertices);
+        this.visiblePoint = computeVisiblePoint();
+        computeBoundingBox();
+        doPrecomputations();
     }
 
-    public float getHeight() {
-        return height;
-    }
 
-    public void setHeight(float height) {
-        this.height = height;
-    }
-
-    public PlanarPolygon(){
+    public SphericalPolygon(){
         vertices = new ArrayList<Vec>();
         restRotation = new Quat();
-        height = 5.f;
+        visiblePoint = new Vec(0,0,1);
     }
 
-    public PlanarPolygon(ArrayList<Vec> vertices, Quat restRotation, float height) {
-        this.vertices = vertices;
+    public SphericalPolygon(ArrayList<Vec> vertices, Quat restRotation, Vec visiblePoint) {
+        this.vertices = projectToUnitSphere(vertices);
         this.restRotation = restRotation.get();
-        this.height = height;
-        projectToPlane();
+        this.visiblePoint = visiblePoint;
+        visiblePoint.normalize();
         computeBoundingBox();
+        doPrecomputations();
     }
 
-    public PlanarPolygon(ArrayList<Vec> vertices, Quat restRotation) {
-        this.vertices = vertices;
+    public SphericalPolygon(ArrayList<Vec> vertices, Quat restRotation) {
+        this.vertices = projectToUnitSphere(vertices);
         this.restRotation = restRotation.get();
-        projectToPlane();
+        this.visiblePoint = computeVisiblePoint();
         computeBoundingBox();
+        doPrecomputations();
     }
 
-    public PlanarPolygon(ArrayList<Vec> vertices) {
-        this.vertices = vertices;
-        projectToPlane();
+    public SphericalPolygon(ArrayList<Vec> vertices) {
+        this.vertices = projectToUnitSphere(vertices);
+        this.visiblePoint = computeVisiblePoint();
         computeBoundingBox();
+        doPrecomputations();
     }
 
     @Override
@@ -100,16 +103,11 @@ public class PlanarPolygon extends Constraint{
 
     public Vec getConstraint(Vec target, Quat restRotation){
         Vec point   = restRotation.inverse().multiply(target);
-        Vec proj    = new Vec(height*point.x()/point.z(),height*point.y()/point.z());
-        float inverse = (height < 0) == (point.z() < 0) ? 1 : -1;
-        if(!isInside(proj)){
-            proj.multiply(inverse);
-            Vec constrained = closestPoint(proj);
-            constrained.setZ(height);
-            constrained.multiply(inverse*point.z()/height);
+        if(!isInside(point)){
+            Vec constrained = closestPoint(point);
             return restRotation.rotate(constrained);
         }
-        return inverse == -1 ? new Vec(target.x(),target.y(), -target.z()) : target;
+        return target;
     }
 
     public void computeBoundingBox(){
@@ -117,32 +115,56 @@ public class PlanarPolygon extends Constraint{
         for(Vec v : vertices){
             if(v.x() < min.x()) min.setX(v.x());
             if(v.y() < min.y()) min.setY(v.y());
+            if(v.z() < min.z()) min.setZ(v.z());
             if(v.x() > max.x()) max.setX(v.x());
             if(v.y() > max.y()) max.setY(v.y());
+            if(v.z() > max.z()) max.setZ(v.z());
         }
     }
 
-    public void projectToPlane(){
-        for(Vec v : vertices){
-            //Just not consider Z
-            v.setZ(0);
+
+    //Compute centroid
+    //TO DO: Choose a Visible point which works well for non convex Polygons
+    public Vec computeVisiblePoint(){
+        if(vertices.isEmpty()) return null;
+        Vec centroid = new Vec();
+        //Assume that every vertex lie in the sphere boundary
+        for(Vec vertex : vertices){
+            centroid.add(vertex);
+        }
+        centroid.normalize();
+        return centroid;
+    }
+
+    public ArrayList<Vec> projectToUnitSphere(ArrayList<Vec> vertices){
+        ArrayList<Vec> newVertices = new ArrayList<Vec>();
+        for(Vec vertex : vertices){
+            newVertices.add(vertex.normalize(new Vec()));
+        }
+        return newVertices;
+    }
+
+    public void doPrecomputations(){
+        B = new ArrayList<Vec>();
+        S = new ArrayList<Vec>();
+        for(int i = 0; i < vertices.size(); i++){
+            Vec p_i =  vertices.get(i);
+            Vec p_j =  i + 1 == vertices.size() ? vertices.get(0) : vertices.get(i + 1);
+            S.add(Vec.cross(visiblePoint, p_i, null));
+            B.add(Vec.cross(p_i, p_j, null));
         }
     }
 
-    /*Code was transcript from https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html*/
-    public boolean isInside(Vec point){
-        if(point.x() < min.x() || point.x() > max.x() ||
-                point.y() < min.y() || point.y() > max.y()) return false;
-        //Ray-casting algorithm
-        boolean c = false;
-        for(int i = 0, j = vertices.size()-1; i < vertices.size(); j = i++){
-            Vec v_i = vertices.get(i);
-            Vec v_j = vertices.get(j);
-            if ( ((v_i.y()>point.y()) != (v_j.y()>point.y())) &&
-                    (point.x() < (v_j.x()-v_i.x()) * (point.y()-v_i.y()) / (v_j.y()-v_i.y()) + v_i.x()))
-                        c = !c;
+    public boolean isInside(Vec L){
+        //1. Find i s.t p_i = S_i . L >= 0 and p_j = S_j . L < 0 with j = i + 1
+        int index = 0;
+        for(int i = 0; i < vertices.size(); i++){
+            if(Vec.dot(S.get(i), L) >= 0 && Vec.dot(S.get((i + 1) % vertices.size()), L) < 0){
+                index = i;
+                break;
+            }
         }
-        return c;
+        return Vec.dot(B.get(index),L) >= 0;
     }
 
     public Vec closestPoint(Vec point){

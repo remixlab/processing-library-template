@@ -98,6 +98,14 @@ public class BallAndSocket extends Constraint{
         this.right = right;
     }
 
+    public BallAndSocket(float vertical, float horizontal) {
+        this(vertical, vertical, horizontal, horizontal);
+    }
+
+    public BallAndSocket(float vertical, float horizontal, Quat restRotation) {
+        this(vertical, vertical, horizontal, horizontal, restRotation);
+    }
+
     @Override
     public Rotation constrainRotation(Rotation rotation, Frame frame) {
         if(frame.is2D())
