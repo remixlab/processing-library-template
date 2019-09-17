@@ -1,3 +1,7 @@
+# Note: this project is deprecated!
+
+Please visit [nub](https://github.com/VisualComputing/nub) to find the latest code. My latest code has been merged with that project and I am committing all my new updates to it.
+
 ProScene [![Version](https://img.shields.io/badge/proscene-v3.0.0-brightgreen.svg)](https://github.com/remixlab/proscene/releases/download/latest/proscene.zip) [![Dependencies](https://img.shields.io/badge/dependencies-processing%203-orange.svg)](http://processing.org/) [![License](https://img.shields.io/badge/license-GPL%203-blue.svg)](http://www.gnu.org/licenses/gpl.html) [![Paper](https://img.shields.io/badge/paper-softwareX-yellow.svg)](https://authors.elsevier.com/sd/article/S235271101730002X) 
 ===========================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================
 
