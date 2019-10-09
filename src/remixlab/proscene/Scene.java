@@ -109,9 +109,9 @@ public class Scene extends AbstractScene implements PConstants {
   // end: GWT-incompatible
   // */
 
-  public static final String prettyVersion = "3.0.0";
+  public static final String prettyVersion = "3.0.1";
 
-  public static final String version = "32";
+  public static final String version = "33";
 
   // P R O C E S S I N G A P P L E T A N D O B J E C T S
   protected PApplet parent;
